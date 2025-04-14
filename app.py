@@ -6,8 +6,9 @@ import os
 from sel import clone_page
 from is_ob import is_obfuscated
 
-API_TOKEN = 'your_bot_token_here'
+API_TOKEN = '8110718903:AAFlE-nSLZZPXUSmkYdEmCc69ZvIXp7iy_k'
 bot = telebot.TeleBot(API_TOKEN)
+
 
 app = Flask(__name__)
 
@@ -91,4 +92,4 @@ def run_bot():
 
 if __name__ == '__main__':
     threading.Thread(target=run_bot).start()
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=5001)
