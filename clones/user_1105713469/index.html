@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Myntra Login Recreation</title>
+    <style>
+        :root {
+            --myntra-pink: #ff3f6c;
+            --text-dark: #282c3f;
+            --text-light: #696e79;
+            --border-color: #d4d5d9;
+            --bg-light-gray: #f5f5f6;
+            --link-color: var(--myntra-pink); /* Consistent link color */
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Assistant', sans-serif; /* Myntra uses Assistant font */
+            font-size: 14px;
+            color: var(--text-dark);
+            line-height: 1.5;
+            background-color: #fff; /* Default white background */
+        }
+
+        /* Basic link styling */
+        a {
+            text-decoration: none;
+            color: var(--link-color); /* Use variable for links */
+            font-weight: 700; /* Bold links */
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+
+        /* Header Styles */
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px 2%; /* Padding relative to viewport width */
+            border-bottom: 1px solid var(--border-color);
+            height: 50px; /* Approximate height */
+            box-sizing: border-box;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+        }
+
+        .logo-placeholder {
+            width: 40px; /* Approx size */
+            height: 30px;
+            background-color: var(--myntra-pink);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 20px;
+            margin-right: 30px;
+            border-radius: 4px; /* Slight rounding */
+        }
+
+        .main-nav ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+        }
+
+        .main-nav li {
+            margin-right: 25px;
+        }
+
+        .main-nav a {
+            color: var(--text-dark);
+            text-transform: uppercase;
+            font-weight: 700; /* Bold nav links */
+            font-size: 13px; /* Slightly smaller */
+            letter-spacing: 0.5px;
+        }
+        .main-nav a:hover {
+            border-bottom: 2px solid var(--myntra-pink); /* Hover effect */
+            text-decoration: none;
+        }
+
+
+        .header-right {
+            display: flex;
+            align-items: center;
+        }
+
+        .search-bar {
+            display: flex;
+            align-items: center;
+            background-color: var(--bg-light-gray);
+            padding: 8px 12px;
+            border-radius: 4px;
+            width: 300px; /* Adjust as needed */
+            margin-right: 30px;
+        }
+        .search-bar input {
+            border: none;
+            outline: none;
+            background: none;
+            flex-grow: 1;
+            font-size: 14px;
+        }
+        .search-icon-placeholder {
+            width: 16px;
+            height: 16px;
+            background-color: #aaa; /* Placeholder color */
+            margin-right: 8px;
+            border-radius: 50%; /* Circle icon */
+        }
+
+        .user-actions {
+            display: flex;
+            align-items: center;
+        }
+
+        .action-item {
+            text-align: center;
+            margin-left: 25px;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-dark);
+            cursor: pointer;
+        }
+        .action-icon-placeholder {
+            width: 20px;
+            height: 20px;
+            background-color: #ccc; /* Placeholder color */
+            margin: 0 auto 4px auto; /* Center icon above text */
+        }
+
+        /* Main Content Styles */
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px; /* Vertical and horizontal padding */
+            background-color: #fff; /* Ensure main content bg */
+        }
+
+        .promo-banner-placeholder {
+            width: 100%;
+            max-width: 400px; /* Match form width */
+            height: 150px; /* Approximate height */
+            background-color: #fdefe6; /* Light banner background */
+            border: 1px dashed var(--border-color); /* Dashed border */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: var(--text-light);
+            font-size: 12px;
+            margin-bottom: 30px;
+            box-sizing: border-box;
+            padding: 15px;
+        }
+        .promo-banner-placeholder .promo-text {
+             line-height: 1.6;
+        }
+        .promo-banner-placeholder .code {
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+
+
+        /* Login Form Styles - Reusing from previous example with slight adjustments */
+        .login-container {
+            background-color: #fff; /* Ensure white background */
+            padding: 30px;
+            border: 1px solid var(--border-color); /* Add slight border if needed */
+            border-radius: 4px;
+            /* box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); Optional subtle shadow */
+            text-align: left; /* Align content left */
+            max-width: 400px; /* Fixed max width */
+            width: 100%; /* Take full width up to max-width */
+            box-sizing: border-box;
+        }
+
+        .login-container h2 {
+            font-size: 1.3em; /* Slightly smaller */
+            margin-bottom: 20px;
+            color: var(--text-dark);
+            font-weight: 700;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+            position: relative; /* Needed for potential prefix absolute positioning */
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 400; /* Normal weight */
+            font-size: 0.9em;
+            color: var(--text-dark);
+        }
+        /* Input field with border */
+        .input-group input[type="tel"] {
+            width: 100%;
+            padding: 10px 10px 10px 15px; /* Add padding for text */
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+         .input-group input[type="tel"]:focus {
+             border-color: var(--text-dark);
+             outline: none;
+         }
+
+
+        .terms {
+            font-size: 0.9em; /* Slightly larger terms */
+            color: var(--text-light);
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+        /* Terms links use root 'a' styling */
+
+        .login-button {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--myntra-pink);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 1em;
+            font-weight: 700; /* Bold button text */
+            cursor: pointer;
+            margin-bottom: 25px; /* More space below button */
+            text-transform: uppercase;
+        }
+        .login-button:hover {
+            background-color: #e0355b; /* Darker pink on hover */
+        }
+
+        .help-link {
+            font-size: 0.95em; /* Slightly larger help text */
+            color: var(--text-dark); /* Default text color */
+        }
+        /* Help link uses root 'a' styling */
+
+        /* Responsive Adjustments */
+        @media (max-width: 900px) {
+            .main-nav {
+                display: none; /* Hide nav links on smaller screens */
+            }
+            .search-bar {
+                width: auto; /* Allow search to shrink */
+                flex-grow: 1; /* Take available space */
+                margin-right: 15px;
+            }
+            .user-actions .action-item {
+                margin-left: 15px; /* Reduce spacing */
+            }
+            .logo-placeholder {
+                 margin-right: 15px;
+            }
+        }
+        @media (max-width: 600px) {
+             .page-header {
+                 padding: 10px 3%;
+                 height: auto; /* Allow header to wrap */
+                 flex-wrap: wrap; /* Allow wrapping */
+             }
+             .header-left {
+                  width: 100%;
+                  margin-bottom: 10px; /* Space below logo/nav area */
+                  justify-content: space-between; /* Space out logo and maybe a burger icon (not implemented) */
+             }
+              .main-nav {
+                 display: none; /* Ensure it stays hidden */
+             }
+             .header-right {
+                 width: 100%;
+                 justify-content: space-between; /* Space search and actions */
+             }
+             .search-bar {
+                 margin-right: 10px;
+             }
+             .user-actions {
+                 /* No change needed here yet */
+             }
+             .action-item {
+                 margin-left: 10px;
+             }
+             .main-content {
+                 padding: 20px 10px; /* Reduce padding */
+             }
+             .login-container {
+                 padding: 20px;
+                 border: none; /* Remove border on mobile */
+             }
+        }
+
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header class="page-header">
+        <div class="header-left">
+            <div class="logo-placeholder">M</div>
+            <nav class="main-nav">
+                <ul>
+                    <li><a href="#">Men</a></li>
+                    <li><a href="#">Women</a></li>
+                    <li><a href="#">Kids</a></li>
+                    <li><a href="#">Home Living</a></li>
+                    <li><a href="#">Studio</a></li>
+                </ul>
+            </nav>
+        </div>
+        <div class="header-right">
+            <div class="search-bar">
+                <div class="search-icon-placeholder"></div>
+                <input type="text" placeholder="Search for products, brands and more">
+            </div>
+            <div class="user-actions">
+                <div class="action-item">
+                    <div class="action-icon-placeholder"></div>
+                    Wishlist
+                </div>
+                <div class="action-item">
+                    <div class="action-icon-placeholder"></div>
+                    Bag
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="promo-banner-placeholder">
+            <div class="promo-text">
+                <strong>FLAT ₹200 OFF</strong><br>
+                + Free Shipping On 1st Order<br>
+                <span class="code">Code: MYNTRA200</span>
+                <br>(Banner Image Placeholder)
+            </div>
+        </div>
+
+        <div class="login-container">
+            <form action="#" method="post"> <h2>Login or Signup</h2>
+
+                <div class="input-group">
+                    <label for="mobile" style="position:absolute; left:-9999px;">Mobile Number</label>
+                     <input type="tel" id="mobile" name="mobile" placeholder="+91 | Mobile Number*" required aria-label="Mobile Number">
+                </div>
+
+                <p class="terms">
+                    By continuing, I agree to the <a href="#">Terms of Use</a> &amp; <a href="#">Privacy Policy</a> and I am above 18 years old.
+                </p>
+
+                <button type="submit" class="login-button">Continue</button>
+            </form>
+
+            <p class="help-link">
+                Have trouble logging in? <a href="#">Get help</a>
+            </p>
+        </div>
+    </main>
+
+</body>
+</html>
