@@ -1,0 +1,5 @@
+Flask
+telebot
+requests
+beautifulsoup4
+selenium
