@@ -39,7 +39,7 @@ def shorten_url(long_url):
         }
         response = requests.post('https://api-ssl.bitly.com/v4/shorten', headers=headers, json=payload)
 
-        if response.status_code == 200:
+        if response.status_code == 200 or response.status_code ==201:
             return response.json().get('link')
         else:
             logger.error(f"Bit.ly API error: {response.status_code} - {response.text}")
