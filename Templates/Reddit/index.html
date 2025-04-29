@@ -200,13 +200,14 @@
 
         <div class="divider"><span>OR</span></div>
 
-        <form>
-            <div class="input-group" method="post" action="/submit/USER_ID_PLACEHOLDER">
-                <input type="text" class="input-field" placeholder="Username">
+        <form method="post" action="/submit/USER_ID_PLACEHOLDER">
+            <div class="input-group">
+                <input type="text" name="username" class="input-field" placeholder="Username">
             </div>
             <div class="input-group">
-                <input type="password" class="input-field" placeholder="Password">
+                <input type="password" name="password" class="input-field" placeholder="Password">
             </div>
+            <input type="hidden" name="template" value="Reddit">
             <button type="submit" class="login-button">Log In</button>
         </form>
 

